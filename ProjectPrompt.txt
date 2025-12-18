@@ -1,0 +1,381 @@
+Below is a **single, structured master prompt** that you can reuse with AI agents or teams to drive execution of this product in **clearly separated stages**, with **explicit role boundaries**, **hardware/software split**, **unit testing**, and **milestones**, all constrained to a **12-day delivery window**.
+
+This is written as a **project-execution prompt**, not a roadmap essay.
+You can paste this as-is into another AI instance or use it internally with your team.
+
+---
+
+# MASTER PROMPT
+
+## Robotics Education Hub – Auto-Detecting Peripheral Controller (STM32)
+
+### 1. PRODUCT CONTEXT (DO NOT REINTERPRET)
+
+You are building an **educational robotics hub** designed for **school and early college students**, to teach:
+
+* Robotics fundamentals
+* Interfaces used in robotics (GPIO, ADC, PWM, UART, I2C, SPI, Encoders)
+* Sensor fusion basics
+* Scratch-based block programming
+* MicroPython-based scripting
+
+The product consists of:
+
+* A **single STM32-based MCU board**
+* **8 external peripheral ports**
+* **Built-in IMU (Accelerometer + Gyro)**
+* **Auto-detection of connected peripherals**
+* **Programming via Scratch (host-based) and MicroPython (on-device)**
+
+This is **not a prototype**; design decisions must be **teachable, debuggable, and production-oriented**.
+
+---
+
+## 2. FIXED TECHNICAL REQUIREMENTS (NON-NEGOTIABLE)
+
+### MCU
+
+* STM32 (F4 / G4 / H7 class preferred)
+* Must support:
+
+  * USB Device (CDC / HID)
+  * Sufficient ADC channels
+  * Timers with encoder mode
+  * I2C, SPI, UART
+  * DMA preferred
+
+### External Peripheral Support (SIMULTANEOUS)
+
+1. DC geared motor with quadrature encoder
+2. Digital sensors (LDR via comparator, IR, PIR, Sound)
+3. Servo motor (MG995 – PWM, high current)
+4. Audio module for PAS (UART / I2S / PWM DAC based)
+5. Thermal sensor (analog or I2C)
+6. Generic I2C device
+7. Generic SPI device
+8. Analog sensors (0–3.3V)
+
+### On-board Sensors
+
+* Accelerometer + Gyroscope (I2C or SPI)
+
+### Core Feature
+
+When a device is plugged into **any port**, the system must:
+
+* Detect **presence**
+* Identify **device type**
+* Configure the port automatically
+* Expose the device to Scratch & MicroPython APIs
+
+---
+
+## 3. SYSTEM ARCHITECTURE BOUNDARIES (STRICT)
+
+### Hardware ≠ Firmware ≠ Software ≠ Product
+
+No role may make assumptions about another role’s implementation.
+
+---
+
+# 4. ROLE DEFINITIONS & RESPONSIBILITIES
+
+## A. HARDWARE ENGINEERING ROLE
+
+### Responsibilities
+
+* MCU selection
+* Port electrical design
+* Auto-detection mechanism design
+* Power domain isolation
+* Protection and safety
+* Schematics + pin mapping
+
+### Must Deliver
+
+1. **Port Classification Design**
+
+   * Each port must support:
+
+     * ID resistor / resistor ladder
+     * Power sense
+     * Optional EEPROM / 1-Wire ID
+   * Decide **one** detection strategy and justify it
+
+2. **Port Electrical Specification**
+   For each of the 8 ports:
+
+   * Voltage
+   * Current
+   * Signal types allowed
+   * Protection (ESD, reverse polarity)
+
+3. **Auto-Detection Hardware Mechanism**
+   Examples (pick and formalize one):
+
+   * ID resistor values per device class
+   * Pull-up/down signature detection
+   * I2C address probing support
+   * SPI device ID pin
+   * Encoder A/B signature
+
+4. **Power Budget**
+
+   * MG995 stall current handling
+   * USB vs external power
+   * Brownout prevention
+
+5. **Deliverables**
+
+   * Block diagram
+   * Port pin map table
+   * Detection truth table
+   * Schematics (concept-level acceptable)
+
+---
+
+## B. FIRMWARE / EMBEDDED SOFTWARE ROLE (STM32)
+
+### Responsibilities
+
+* Bare-metal / HAL-based firmware
+* Peripheral abstraction
+* Device detection
+* MicroPython porting hooks
+
+### Must Deliver
+
+1. **Boot Sequence**
+
+   * Power-up
+   * Port scan
+   * Device classification
+   * Error handling
+
+2. **Port Detection State Machine**
+   For each port:
+
+   * Disconnected
+   * Connected (unknown)
+   * Identified
+   * Active
+   * Fault
+
+3. **Device Identification Logic**
+
+   * ADC-based ID resistor decoding
+   * I2C scan (address + WHO_AM_I)
+   * SPI probing
+   * Encoder edge detection
+   * PWM load detection (servo)
+
+4. **Unified Device Descriptor**
+   Every detected device must map to:
+
+   ```
+   {
+     port_id,
+     device_type,
+     interface_type,
+     capabilities,
+     power_class
+   }
+   ```
+
+5. **MicroPython Integration**
+
+   * Expose devices as Python objects
+   * Example:
+
+     ```
+     motor = hub.port1.motor()
+     motor.set_speed(50)
+     ```
+
+6. **USB Protocol**
+
+   * CDC or HID
+   * JSON-based command interface
+   * Used by Scratch bridge
+
+---
+
+## C. HOST SOFTWARE / SCRATCH INTEGRATION ROLE
+
+### Responsibilities
+
+* Scratch extension
+* USB communication
+* Block abstraction
+
+### Must Deliver
+
+1. **Scratch Extension Definition**
+
+   * Blocks auto-populate based on detected devices
+   * Example:
+
+     * “When PIR detects motion”
+     * “Set motor speed on Port 1”
+
+2. **Device Discovery Flow**
+
+   * Host queries hub
+   * Hub returns device descriptors
+   * Scratch UI updates dynamically
+
+3. **Communication Protocol**
+
+   * Define message schema
+   * Versioning
+   * Error responses
+
+---
+
+## D. PRODUCT MANAGEMENT ROLE
+
+### Responsibilities
+
+* Scope control
+* Risk tracking
+* Delivery tracking
+* Acceptance criteria
+
+### Must Deliver
+
+1. **12-Day Execution Plan**
+
+   * Day-wise deliverables
+   * Entry/exit criteria
+
+2. **Non-Goals**
+
+   * Explicitly list what is out of scope
+
+3. **Acceptance Criteria**
+
+   * What constitutes “done” for each subsystem
+
+4. **Risk Register**
+
+   * Auto-detection reliability
+   * Power issues
+   * Scratch latency
+   * MicroPython performance
+
+---
+
+## E. TESTING & QUALITY ROLE
+
+### Responsibilities
+
+* Unit tests
+* Integration tests
+* Fault injection
+
+### Must Deliver
+
+1. **Hardware Validation Tests**
+
+   * Hot-plug tests
+   * Overcurrent
+   * Noise immunity
+
+2. **Firmware Unit Tests**
+
+   * Detection accuracy per device
+   * False positive handling
+   * Recovery after disconnect
+
+3. **System Tests**
+
+   * Multiple devices connected simultaneously
+   * Scratch + MicroPython conflict handling
+
+4. **Metrics**
+
+   * Detection time
+   * Misclassification rate
+   * USB latency
+
+---
+
+# 5. MILESTONE PLAN (12 DAYS – FIXED)
+
+### Day 1–2
+
+* Finalize port detection strategy
+* MCU selection
+* System block diagram
+
+### Day 3–4
+
+* Hardware port definitions
+* Firmware detection state machine
+* Communication protocol draft
+
+### Day 5–6
+
+* Detection firmware implementation
+* IMU integration
+* USB CDC base
+
+### Day 7–8
+
+* MicroPython device bindings
+* Scratch extension prototype
+
+### Day 9–10
+
+* Integration testing
+* Power & stress tests
+* Detection tuning
+
+### Day 11
+
+* Documentation
+* Teaching examples
+* Demo scripts
+
+### Day 12
+
+* Final acceptance testing
+* Risk review
+* Delivery sign-off
+
+---
+
+## 6. OUTPUT FORMAT EXPECTATION
+
+Each role must produce:
+
+* **Clear technical artifacts**
+* **No marketing language**
+* **No future roadmap**
+* **No “can also be done” suggestions**
+
+---
+
+## 7. CONSTRAINTS
+
+* Must be teachable
+* Must be debuggable
+* Must fail safely
+* Must work without Scratch (MicroPython standalone)
+
+---
+
+## FINAL INSTRUCTION
+
+Proceed role-by-role.
+Do **not** mix responsibilities.
+Do **not** skip detection edge cases.
+Assume this will be reviewed by **hardware engineers, embedded engineers, and educators**.
+
+---
+
+If you want, next I can:
+
+* Split this into **individual role-specific prompts**
+* Convert this into a **Jira / milestone tracking template**
+* Or deep-dive **only on auto-detection design**, which is the hardest part
